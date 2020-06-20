@@ -23,6 +23,7 @@ namespace FileSendNet
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = new ApplicationViewModel();
         }
     }
 }
