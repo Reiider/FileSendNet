@@ -1,26 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.Hosting;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FileSendNet
 {
     class Computer : INotifyPropertyChanged
     {
-        private string nickName;
-        private IPAddress ip;
-        private string localPath;
+        protected string nickName;
+        protected IPAddress ip;
+        protected string localPath;
 
         protected IPEndPoint ipPoint;
-        protected Socket socket;
+        protected Socket mainSocket;
 
         protected static int port = 8005;
+
+        protected string stringObj = "123sdsad";
 
 
         public Computer(string nickName, string ip)
@@ -39,10 +35,20 @@ namespace FileSendNet
             {
                 OnPropertyChanged();
             }
-
             ipPoint = new IPEndPoint(this.ip, port);
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            mainSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             localPath = @".\Download";
+            StringObj = NickName + " " + Ip;
+        }
+
+        public string StringObj
+        {
+            get { return stringObj; }
+            set
+            {
+                stringObj = NickName + " " + Ip;
+                OnPropertyChanged();
+            }
         }
         public string NickName
         {
@@ -81,22 +87,24 @@ namespace FileSendNet
             }
         }
 
-        public bool isConnectWith(string ip) //можно ли подключится по данному адресу
+        public IPEndPoint IpPoint
         {
-
-            return false;
+            get { return ipPoint; }
+            set
+            {
+                ipPoint = value;
+                OnPropertyChanged();
+            }
         }
 
-        public Computer ConnectWith(string ip)// подключится к данному пк Если подключение удачно возвращает объект, иначе NULL
+        public Socket MainSocket
         {
-
-            return null;
-        }
-
-        public bool SendTo(string[] path, Computer comp) //передать файлы
-        {
-
-            return false;
+            get { return mainSocket; }
+            set
+            {
+                mainSocket = value;
+                OnPropertyChanged();
+            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -105,32 +113,11 @@ namespace FileSendNet
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
         }
 
-        public void client()
+        protected void CloseSocket(Socket socket)
         {
-            try
-            {
-                socket.Connect(ipPoint);
-                string mes = "";
-                byte[] data = Encoding.Unicode.GetBytes(mes);
-                socket.Send(data);
-
-                //get answer
-
-                data = new byte[256];
-                StringBuilder builder = new StringBuilder();
-                int bytes = 0;
-                do
-                {
-                    bytes = socket.Receive(data);
-                    builder.Append(Encoding.Unicode.GetString(data, 0, bytes));
-                }
-                while (socket.Available > 0);
-
-
-                socket.Shutdown(SocketShutdown.Both);
-                socket.Close();
-            }
-            catch { }
+            socket.Shutdown(SocketShutdown.Both);
+            socket.Close();
         }
+
     }
 }

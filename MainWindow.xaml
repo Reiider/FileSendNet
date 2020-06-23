@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FileSendNet"
         mc:Ignorable="d"
-        Title="FileSendNet" Height="450" Width="800">
+        Title="FileSendNet" Height="450" Width="800" Closed="Window_Closed">
     <Window.Resources>
         <Style TargetType="TextBlock">
             <Setter Property="FontSize" Value="14" />
@@ -34,8 +34,8 @@
         </Menu>
         
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <TextBlock Grid.Column="1" Grid.Row="0" TextAlignment="Right" Padding="5, 0, 5, 0" Text="{Binding Path=MyComputer.NickName}" Background="#FFF0F0F0" FontWeight="Bold" />
-            <TextBlock Grid.Column="1" Grid.Row="0" TextAlignment="Right" Padding="5, 0, 5, 0" Text="{Binding Path=MyComputer.Ip}" Background="#FFF0F0F0" FontWeight="Bold" />
+            <TextBlock Grid.Column="1" Grid.Row="0" TextAlignment="Right" Padding="5, 0, 5, 0" Text="{Binding MyComputer.NickName}" Background="#FFF0F0F0" FontWeight="Bold" />
+            <TextBlock Grid.Column="1" Grid.Row="0" TextAlignment="Right" Padding="5, 0, 5, 0" Text="{Binding MyComputer.Ip}" Background="#FFF0F0F0" FontWeight="Bold" />
         </StackPanel> 
         
         <Grid Grid.Column="0"  Grid.ColumnSpan="2" Grid.Row="1" Margin="0,5,0,0" >
@@ -53,8 +53,12 @@
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" TextAlignment="Center" Background="#FFF0F0F0">Соединить с</TextBlock>
 
-                    <ListBox Grid.Row="1" ItemsSource="{Binding Computers}" SelectedItem="{Binding }">
-                            
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Computers}" SelectedItem="{Binding SelectComputer}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding SelectComputer.StringObj}"></Button>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
                     </ListBox>
                     
                 </Grid>
@@ -68,7 +72,14 @@
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" TextAlignment="Center" Background="#FFF0F0F0"> Мои файлы </TextBlock>
                     <Grid Grid.Row="1">
-                        
+                        <Grid.RowDefinitions>
+                            <RowDefinition></RowDefinition>
+                            <RowDefinition Height="20"></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            
+                        </Grid>
+                        <ProgressBar Grid.Row="1" Value="{Binding myComputer.valueProgressBar}"/>
                     </Grid>
                 </Grid>
             </Grid>

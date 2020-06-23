@@ -7,18 +7,20 @@ using System.IO;
 using System.Net.Sockets;
 using System.Collections.ObjectModel;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace FileSendNet
 {
     class ApplicationViewModel : INotifyPropertyChanged
     {
-        private Computer myComputer;
+        private ComputerServer myComputer;
         private Computer selectComputer;
         public ObservableCollection<Computer> Computers { get; set; }
+        
 
         Thread updator;
 
-        public Computer MyComputer
+        public ComputerServer MyComputer
         {
             get { return myComputer; }
             set
@@ -38,14 +40,23 @@ namespace FileSendNet
             }
         }
 
+
         public ApplicationViewModel()
         {
-            string host = Dns.GetHostName();
-            myComputer = new Computer(host, Dns.GetHostEntry(host).AddressList[1].ToString());
+            myComputer = new ComputerServer();
+            myComputer.AddNewComputer += AddNewComputer;
 
             Computers = new ObservableCollection<Computer>();
             updator = new Thread(new ThreadStart(FindComputers));
             updator.Start();
+
+            Computers.Add(new Computer("asd1", "127.0.0.1"));
+            Computers.Add(new Computer("ewae23", "123.0.0.13"));
+        }
+
+        private void AddNewComputer(Computer computer)
+        {
+            Computers.Add(computer);
         }
 
         private async void FindComputers()
@@ -57,7 +68,7 @@ namespace FileSendNet
             {
                 for(int i = 1; i < 254; i++)
                 {
-                      
+                    await Task.Run(() => myComputer.CanConnectWith(mainIp + i.ToString()));
                 }
                 Thread.Sleep(1500);
             }
@@ -67,6 +78,25 @@ namespace FileSendNet
         public void OnPropertyChanged([CallerMemberName] string prop = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
+        }
+
+
+        private RelayCommand selectCommand;
+        public RelayCommand SelectCommand
+        {
+            get
+            {
+                return selectCommand ??
+                    (selectCommand = new RelayCommand(obj =>
+                    {
+                        myComputer.ConnectWith(SelectComputer);
+                    }));
+            }
+        }
+
+        public void CloseApplication()
+        {
+            myComputer.StopServer();
         }
     }
 }

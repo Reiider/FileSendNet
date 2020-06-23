@@ -25,5 +25,10 @@ namespace FileSendNet
             InitializeComponent();
             DataContext = new ApplicationViewModel();
         }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            ((ApplicationViewModel)DataContext).CloseApplication();
+        }
     }
 }
