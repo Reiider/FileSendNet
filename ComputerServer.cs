@@ -1,21 +1,23 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Documents;
 
 namespace FileSendNet
 {
     class ComputerServer : Computer
     {
-        Socket socketSender;
-        Thread threadServer;
-        Thread threadClient;
-        bool isFreeServer;
-        bool isFile;
+        Socket socketSender; //клиент соединенный с сервером
+        Thread threadServer; //поток входящих подключений
+        Thread threadClient; //поток входящих сообщений от подключенного клиента
+        bool isFreeServer; //true - нет подключенного клиента, false - есть
+        bool isFile; // true - в данный момент передается файл
         FileInfo fileInfo;
         long lenghtLastFile;
         double valueProgressBar;
@@ -36,6 +38,11 @@ namespace FileSendNet
             fileSending = false;
             threadServer = new Thread(new ThreadStart(Server));
             threadServer.Start();
+
+            if (!Directory.Exists(@".\Download"))
+            {
+                Directory.CreateDirectory(@".\Download");
+            }
         }
 
         public double ValueProgressBar
@@ -50,13 +57,21 @@ namespace FileSendNet
 
         private void Server()
         {
-            mainSocket.Bind(ipPoint); //не позволяет запустить 2ую копию приложения... Фича
+            try
+            {
+                mainSocket.Bind(ipPoint);
+            }
+            catch
+            {
+                ipPoint = new IPEndPoint(this.ip, port+1);
+                mainSocket.Bind(ipPoint);
+            }//не позволяет запустить 2ую копию приложения... Фича
             mainSocket.Listen(10);
 
             GetMessages();
         }
 
-        private void GetMessages()
+        private void GetMessages() // ожидает входящих подключений (клиентов)
         {
             while (true)
             {
@@ -75,7 +90,7 @@ namespace FileSendNet
                     while (sender.Available > 0);
 
                     string[] message = builder.ToString().Split(new string[] {"|"}, StringSplitOptions.RemoveEmptyEntries);
-                    switch(message[0]){
+                    switch(message[0]){ //сообщение от клиента
                         case "0": //сервер существует?
                             {
                                 SendMessage($"1|{nickName}", sender, true);//да
@@ -89,7 +104,12 @@ namespace FileSendNet
                                     socketSender = sender;
                                     threadClient = new Thread(GetMessageFromConnectedClient);
                                     threadClient.Start();
+
                                     SendMessage("3", socketSender, false); //сервер успешно занят
+
+                                    //получить папки и файлы от клиента
+                                    SendMessage("10", socketSender, false);
+                                    SendMessage("12", socketSender, false);
                                 }
                                 else
                                 {
@@ -104,7 +124,7 @@ namespace FileSendNet
             }
         }
 
-        private void GetMessageFromConnectedClient()
+        private void GetMessageFromConnectedClient() //ожидает входящий сообщений от подключенного клиента
         {
             FileStream fs = null; //поток для записи файла
             long lenghtFile = 0; //текущий размер файла
@@ -142,7 +162,7 @@ namespace FileSendNet
                     string[] message = builder.ToString().Split(new string[] { "|" }, StringSplitOptions.RemoveEmptyEntries);
                     switch (message[0])
                     {
-                        case "5": //передаю файл - дальше имя файла [1] и размер [2] (для контроля полноты передачи)
+                        case "5": //клиент собирается передавать файл - дальше имя файла [1] и размер [2] (для контроля полноты передачи)
                             {
 
                                 fileInfo = new FileInfo(LocalPath + @"\" + message[1]);
@@ -167,10 +187,73 @@ namespace FileSendNet
                                 }
                                 break;
                             }
-                        case "9": // отправляю файл (на запись/дозапись)
+                        case "6": //файл существует (и размер совпадает)
+                            {
+
+                                break;
+                            }
+                        case "7": //файл существует, и его текущий размер такой-то 
+                            {
+
+                                break;
+                            }
+                        case "8": //файл не существует
+                            {
+
+                                break;
+                            }
+                        case "9": //клиент будет отправлять файл (на запись/дозапись)
                             {
                                 isFile = true;
                                 fs = fileInfo.Open(FileMode.Append);
+                                break;
+                            }
+                        case "10": //клиент зашивает список папок в катологе
+                            {
+                                //список на этом пк в папке download
+                                string fromFolder = @".\Download";
+                                if (message.Length > 1)
+                                {
+                                    fromFolder += @"\" + message[1];
+                                }
+
+                                string[] dirs = Directory.GetDirectories(fromFolder);
+                                string listFolders = "11|";
+                                foreach (string s in dirs)
+                                {
+                                    listFolders += s.Split(new string[] { @"\" }, StringSplitOptions.RemoveEmptyEntries).Last() + "|";
+                                }
+
+                                SendMessage(listFolders, socketSender, false);
+                                //
+                                break;
+                            }
+                        case "11": //получены названия папок на удаленном пк
+                            {
+
+                                break;
+                            }
+                        case "12": //клиент зашивает список файлов в катологе
+                            {
+                                string fromFolder = @".\Download";
+                                if (message.Length > 1)
+                                {
+                                    fromFolder += @"\" + message[1];
+                                }
+
+                                string[] dirs = Directory.GetFiles(fromFolder);
+                                string listFiles = "13|";
+                                foreach (string s in dirs)
+                                {
+                                    listFiles += s.Split(new string[] { @"\" }, StringSplitOptions.RemoveEmptyEntries).Last() + "|";
+                                }
+
+                                SendMessage(listFiles, socketSender, false);
+                                break;
+                            }
+                        case "13": //получены названия файлов на удаленном пк
+                            {
+
                                 break;
                             }
                         default: break;
@@ -184,7 +267,7 @@ namespace FileSendNet
             }
         }
 
-        private void SendMessage(string message, Socket sendTo, bool needClose)
+        private void SendMessage(string message, Socket sendTo, bool needClose = false) //отправляет сообщение
         {
             byte[] data = Encoding.Unicode.GetBytes(message);
             sendTo.Send(data);
@@ -192,7 +275,34 @@ namespace FileSendNet
             if(needClose) CloseSocket(sendTo);
         }
 
-        private void GetMessageFrom(Socket socket, bool needClose, object ipORcomp = null)
+        public void ConnectWith(Computer client)// переключится к данному пк
+        {
+            //если файл передается то не переключать
+            if (isFile) return;//return "Ошибка. Идет переача файла.";
+
+            client.MainSocket.Connect(client.IpPoint);
+            SendMessage("2", client.MainSocket, false);
+            GetMessageFrom(client.MainSocket, false, client);
+        }
+
+        public void CanConnectWith(object strIp) //можно ли подключится по данному адресу
+        {
+            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse((string)strIp), port);
+            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                socket.Connect(endPoint);
+                SendMessage("0", socket, false);
+                GetMessageFrom(socket, true, (string)strIp);
+            }
+            catch
+            {
+                socket.Close();
+            }
+        }
+
+
+        private void GetMessageFrom(Socket socket, bool needClose, object ipORcomp = null) //сразу получает ответное сообщение (не ждет входящих), только до установления соединения
         {
             StringBuilder builder = new StringBuilder();
             int bytes;
@@ -215,6 +325,15 @@ namespace FileSendNet
                 case "3"://сервер успешно занят
                     {
                         connectedClient = (Computer)ipORcomp;
+
+                        isFreeServer = false;
+                        socketSender = socket;
+                        threadClient = new Thread(GetMessageFromConnectedClient);
+                        threadClient.Start();
+
+                        //получить файлы и папки от клиента
+                        SendMessage("10", socketSender, false);
+                        SendMessage("12", socketSender, false);
                         break;
                     }
                 case "4": //не удалось занять сервер
@@ -223,7 +342,6 @@ namespace FileSendNet
                     }
                 default : break;
             }
-
             if (needClose) CloseSocket(socket);
         }
 
@@ -233,31 +351,10 @@ namespace FileSendNet
             return false;
         }
 
-        public async void ConnectWith(Computer client)// переключится к данному пк Если подключение удачно возвращает объект, иначе NULL
+        
+        private void SetRemoteFiles(string[] message)// список файлов начиная с 2ого элемента
         {
-            //если файл передается то не переключать
-            if (fileSending) return;//return "Ошибка. Идет переача файла.";
-
-            client.MainSocket.Connect(client.IpPoint);
-            SendMessage("0", client.MainSocket, false);
-            await Task.Run(() => GetMessageFrom(client.MainSocket, false, client));
-        }
-
-        public async void CanConnectWith(string ip) //можно ли подключится по данному адресу
-        {
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            try
-            {
-                socket.Connect(endPoint);
-                SendMessage("0", socket, false);
-                await Task.Run(() => GetMessageFrom(socket, true, ip));
-            }
-            catch
-            {
-                socket.Close();
-            }
-            
+            //1
         }
 
         public void StopServer()

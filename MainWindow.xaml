@@ -3,9 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
         xmlns:local="clr-namespace:FileSendNet"
         mc:Ignorable="d"
-        Title="FileSendNet" Height="450" Width="800" Closed="Window_Closed">
+        Title="FileSendNet" Height="450" Width="800">
+
     <Window.Resources>
         <Style TargetType="TextBlock">
             <Setter Property="FontSize" Value="14" />
@@ -51,12 +53,12 @@
                         <RowDefinition Height="Auto"></RowDefinition>
                         <RowDefinition Height="*"></RowDefinition>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" TextAlignment="Center" Background="#FFF0F0F0">Соединить с</TextBlock>
+                    <Button Grid.Row="0" Command="{Binding UpdateListPK}" Background="#FFF0F0F0">Список ПК (обновить)</Button>
 
                     <ListBox Grid.Row="1" ItemsSource="{Binding Computers}" SelectedItem="{Binding SelectComputer}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding SelectComputer.StringObj}"></Button>
+                                <Button Command="{Binding ConnectWith}" Content="{Binding Path=StringObj}"></Button>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -76,9 +78,19 @@
                             <RowDefinition></RowDefinition>
                             <RowDefinition Height="20"></RowDefinition>
                         </Grid.RowDefinitions>
-                        <Grid Grid.Row="0">
+
+                        <ListBox Grid.Row="0" ItemsSource="{Binding Computers}" SelectedItem="{Binding SelectComputer}">
+                            <ListBoxItem>
+                                <Button Command="{Binding BackTree}" Content="Назад"></Button>
+                            </ListBoxItem>
                             
-                        </Grid>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding ConnectWith}" Content="{Binding Path=StringObj}"></Button>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        
                         <ProgressBar Grid.Row="1" Value="{Binding myComputer.valueProgressBar}"/>
                     </Grid>
                 </Grid>

@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 
 namespace FileSendNet
 {
@@ -16,7 +17,8 @@ namespace FileSendNet
         private ComputerServer myComputer;
         private Computer selectComputer;
         public ObservableCollection<Computer> Computers { get; set; }
-        
+        Dispatcher dispatcher;
+        public ObservableCollection<FileItem> FileTree { get; set; }
 
         Thread updator;
 
@@ -41,36 +43,33 @@ namespace FileSendNet
         }
 
 
-        public ApplicationViewModel()
+        public ApplicationViewModel(Dispatcher dis)
         {
+            dispatcher = dis;
             myComputer = new ComputerServer();
             myComputer.AddNewComputer += AddNewComputer;
 
             Computers = new ObservableCollection<Computer>();
-            updator = new Thread(new ThreadStart(FindComputers));
-            updator.Start();
-
-            Computers.Add(new Computer("asd1", "127.0.0.1"));
-            Computers.Add(new Computer("ewae23", "123.0.0.13"));
         }
 
         private void AddNewComputer(Computer computer)
         {
-            Computers.Add(computer);
+            dispatcher.BeginInvoke(DispatcherPriority.Normal, 
+                (ThreadStart)delegate () 
+                { 
+                    Computers.Add(computer); 
+                });
         }
 
-        private async void FindComputers()
+        private void FindComputers()
         {
             string[] myIP = myComputer.Ip.Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries);
             string mainIp = $"{myIP[0]}.{myIP[1]}.{myIP[2]}.";
 
-            while (true)
+            for(int i = 1; i < 254; i++)
             {
-                for(int i = 1; i < 254; i++)
-                {
-                    await Task.Run(() => myComputer.CanConnectWith(mainIp + i.ToString()));
-                }
-                Thread.Sleep(1500);
+                Thread th = new Thread( new ParameterizedThreadStart(myComputer.CanConnectWith));
+                th.Start(mainIp + i.ToString());
             }
         }
 
@@ -81,15 +80,42 @@ namespace FileSendNet
         }
 
 
-        private RelayCommand selectCommand;
-        public RelayCommand SelectCommand
+        private RelayCommand connectWith;
+        public RelayCommand ConnectWith
         {
             get
             {
-                return selectCommand ??
-                    (selectCommand = new RelayCommand(obj =>
+                return connectWith ??
+                    (connectWith = new RelayCommand(obj =>
                     {
                         myComputer.ConnectWith(SelectComputer);
+                    }));
+            }
+        }
+
+        private RelayCommand closedApp;
+        public RelayCommand ClosedApp
+        {
+            get
+            {
+                return closedApp ??
+                    (closedApp = new RelayCommand(obj =>
+                    {
+                        myComputer.StopServer();
+                    }));
+            }
+        }
+
+        private RelayCommand updateListPK;
+        public RelayCommand UpdateListPK
+        {
+            get
+            {
+                return updateListPK ??
+                    (updateListPK = new RelayCommand(obj =>
+                    {
+                        updator = new Thread(new ThreadStart(FindComputers));
+                        updator.Start();
                     }));
             }
         }

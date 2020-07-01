@@ -23,7 +23,7 @@ namespace FileSendNet
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new ApplicationViewModel();
+            DataContext = new ApplicationViewModel(this.Dispatcher);
         }
 
         private void Window_Closed(object sender, EventArgs e)
