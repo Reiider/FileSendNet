@@ -21,13 +21,15 @@ namespace FileSendNet
         FileInfo fileInfo;
         long lenghtLastFile;
         double valueProgressBar;
+        string fromFolder = @".\Download"; //папка открывающаяся на удаленном пк
 
         Computer connectedClient;
         bool fileSending;
 
         public delegate void NewComputer(Computer computer);
         public event NewComputer AddNewComputer;
-
+        public delegate void NewFileItem(FileItem item);
+        public event NewFileItem AddNewFileItem;
 
         public ComputerServer() : base(Dns.GetHostName(), Dns.GetHostEntry(Dns.GetHostName()).AddressList[1].ToString())
         {
@@ -210,13 +212,6 @@ namespace FileSendNet
                             }
                         case "10": //клиент зашивает список папок в катологе
                             {
-                                //список на этом пк в папке download
-                                string fromFolder = @".\Download";
-                                if (message.Length > 1)
-                                {
-                                    fromFolder += @"\" + message[1];
-                                }
-
                                 string[] dirs = Directory.GetDirectories(fromFolder);
                                 string listFolders = "11|";
                                 foreach (string s in dirs)
@@ -228,19 +223,16 @@ namespace FileSendNet
                                 //
                                 break;
                             }
-                        case "11": //получены названия папок на удаленном пк
+                        case "11": //получены названия папок с удаленного пк
                             {
-
+                                for(int i = 1; i < message.Length; i++)
+                                {
+                                    AddNewFileItem(new FileItem(message[i], true));
+                                }
                                 break;
                             }
                         case "12": //клиент зашивает список файлов в катологе
                             {
-                                string fromFolder = @".\Download";
-                                if (message.Length > 1)
-                                {
-                                    fromFolder += @"\" + message[1];
-                                }
-
                                 string[] dirs = Directory.GetFiles(fromFolder);
                                 string listFiles = "13|";
                                 foreach (string s in dirs)
@@ -251,9 +243,36 @@ namespace FileSendNet
                                 SendMessage(listFiles, socketSender, false);
                                 break;
                             }
-                        case "13": //получены названия файлов на удаленном пк
+                        case "13": //получены названия файлов с удаленного пк
                             {
-
+                                for (int i = 1; i < message.Length; i++)
+                                {
+                                    AddNewFileItem(new FileItem(message[i], false));
+                                }
+                                break;
+                            }
+                        case "14": //запрос на переход в каталог
+                            {
+                                if (message.Length > 1)
+                                {
+                                    if (message[1] == "-") //возвращаемся в предыдущий каталог
+                                    {
+                                        string[] lf = fromFolder.Split(new string[] { @"\" }, StringSplitOptions.RemoveEmptyEntries);
+                                        if (lf.Last() != "Download") //если это не корень то возвращаемся
+                                        {
+                                            fromFolder = "";
+                                            
+                                            for(int i = 0; i < lf.Length - 1; i++)
+                                            {
+                                                fromFolder += @"\" + lf[i];
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        fromFolder += @"\" + message[1];
+                                    }
+                                }
                                 break;
                             }
                         default: break;
@@ -270,7 +289,7 @@ namespace FileSendNet
         private void SendMessage(string message, Socket sendTo, bool needClose = false) //отправляет сообщение
         {
             byte[] data = Encoding.Unicode.GetBytes(message);
-            sendTo.Send(data);
+            sendTo?.Send(data);
 
             if(needClose) CloseSocket(sendTo);
         }
@@ -352,9 +371,13 @@ namespace FileSendNet
         }
 
         
-        private void SetRemoteFiles(string[] message)// список файлов начиная с 2ого элемента
+        public void OpenFolder(string nameFolder)// открыть выбранную папку на удаленном пк
         {
-            //1
+            SendMessage("14|" + nameFolder, socketSender);
+            //получить папки и файлы от клиента
+            SendMessage("10", socketSender);
+            SendMessage("12", socketSender);
+
         }
 
         public void StopServer()

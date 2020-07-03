@@ -15,12 +15,15 @@ namespace FileSendNet
     class ApplicationViewModel : INotifyPropertyChanged
     {
         private ComputerServer myComputer;
-        private Computer selectComputer;
-        public ObservableCollection<Computer> Computers { get; set; }
         Dispatcher dispatcher;
-        public ObservableCollection<FileItem> FileTree { get; set; }
-
         Thread updator;
+
+        public ObservableCollection<Computer> Computers { get; set; }
+        private Computer selectComputer;
+        
+        public ObservableCollection<FileItem> FileTree { get; set; }
+        private FileItem selectedFile;
+        
 
         public ComputerServer MyComputer
         {
@@ -42,14 +45,25 @@ namespace FileSendNet
             }
         }
 
+        public FileItem SelectedFile
+        {
+            get { return selectedFile; }
+            set
+            {
+                selectedFile = value;
+                OnPropertyChanged();
+            }
+        }
 
         public ApplicationViewModel(Dispatcher dis)
         {
             dispatcher = dis;
             myComputer = new ComputerServer();
             myComputer.AddNewComputer += AddNewComputer;
+            myComputer.AddNewFileItem += AddNewFileItem;
 
             Computers = new ObservableCollection<Computer>();
+            FileTree = new ObservableCollection<FileItem>();
         }
 
         private void AddNewComputer(Computer computer)
@@ -58,6 +72,15 @@ namespace FileSendNet
                 (ThreadStart)delegate () 
                 { 
                     Computers.Add(computer); 
+                });
+        }
+
+        private void AddNewFileItem(FileItem item)
+        {
+            dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                (ThreadStart)delegate ()
+                {
+                    FileTree.Add(item);
                 });
         }
 
@@ -116,6 +139,37 @@ namespace FileSendNet
                     {
                         updator = new Thread(new ThreadStart(FindComputers));
                         updator.Start();
+                    }));
+            }
+        }
+
+        private RelayCommand openOrDownload;
+        public RelayCommand OpenOrDownload
+        {
+            get
+            {
+                return openOrDownload ??
+                    (openOrDownload = new RelayCommand(obj =>
+                    {
+                        if (selectedFile.IsFolder)
+                        {
+                            FileTree.Clear();
+                            myComputer.OpenFolder(selectedFile.Name);
+                        }
+                    }));
+            }
+        }
+
+        private RelayCommand backFolder;
+        public RelayCommand BackFolder
+        {
+            get
+            {
+                return backFolder ??
+                    (backFolder = new RelayCommand(obj =>
+                    {
+                        FileTree.Clear();
+                        myComputer.OpenFolder("-");
                     }));
             }
         }

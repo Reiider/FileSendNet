@@ -75,23 +75,20 @@
                     <TextBlock Grid.Row="0" TextAlignment="Center" Background="#FFF0F0F0"> Мои файлы </TextBlock>
                     <Grid Grid.Row="1">
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"></RowDefinition>
                             <RowDefinition></RowDefinition>
                             <RowDefinition Height="20"></RowDefinition>
                         </Grid.RowDefinitions>
-
-                        <ListBox Grid.Row="0" ItemsSource="{Binding Computers}" SelectedItem="{Binding SelectComputer}">
-                            <ListBoxItem>
-                                <Button Command="{Binding BackTree}" Content="Назад"></Button>
-                            </ListBoxItem>
-                            
+                        <Button Grid.Row="0" Width="100" Command="{Binding BackFolder}" Content="Назад"></Button>
+                        <ListBox Grid.Row="1">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Command="{Binding ConnectWith}" Content="{Binding Path=StringObj}"></Button>
+                                    
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
                         
-                        <ProgressBar Grid.Row="1" Value="{Binding myComputer.valueProgressBar}"/>
+                        <ProgressBar Grid.Row="2" Value="{Binding myComputer.valueProgressBar}"/>
                     </Grid>
                 </Grid>
             </Grid>
@@ -104,7 +101,18 @@
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" TextAlignment="Center" Background="#FFF0F0F0"> Файлы того чела</TextBlock>
                     <Grid Grid.Row="1">
-
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"></RowDefinition>
+                            <RowDefinition Height="*"></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <Button Grid.Row="0"  Width="100" Command="{Binding BackFolder}" Content="Назад"></Button>
+                        <ListBox Grid.Row="1" ItemsSource="{Binding FileTree}" SelectedItem="{Binding SelectedFile}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding openOrDownload}" Content="{Binding Path=Name}"></Button>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </Grid>
                 </Grid>
             </Grid>
